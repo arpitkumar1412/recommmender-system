@@ -1,0 +1,45 @@
+import numpy as ny
+import pandas as pd
+import xlrd
+
+# importing files containing movies and their ratings as given by the users
+
+rati = pd.read_csv(r'ratings.csv')
+movies = pd.read_csv(r'movies.csv')
+
+# putting the input files in a dataframe and combining them as df
+
+data2 = pd.DataFrame(movies, columns = ['itemId','title','genres'])
+data = pd.DataFrame(rati, columns = ['userId','movieId','rating','timestamp'])
+df = pd.concat([data,data2],axis = 1)
+df = df.drop(columns = ['itemId','movieId','genres','timestamp'])
+
+# defining a matrix with rows as user and columns as movie titles and ratings in the cells
+
+movie_matrix = df.pivot_table(index='userId', columns='title', values='rating')
+
+# grouping df on the basis of movie name and calculating average rating given to them and how many users have rated them
+
+ratings = pd.DataFrame(df.groupby('title')['rating'].mean())
+number_of_ratings = df.groupby('title')['rating'].count()
+ratings['number_of_ratings'] = number_of_ratings
+ratings.sort_values(by = ['number_of_ratings'], inplace = True)
+
+# taking input from the user
+
+input_movie = input("enter the name of movie you just watched: ")
+test_movie = movie_matrix[input_movie]
+
+# corr_contact is a dataframe with value of correlation of each movie with the input movie and the number of times each movie is rated
+# if a movie is rated less than 100 times it's correlation is dropped and if the correlation is NaN, it is also dropped
+
+similar_to_test_movie = movie_matrix.corrwith(test_movie)
+corr_contact = pd.DataFrame(similar_to_test_movie, columns=['Correlation'])
+corr_contact['number_of_ratings'] = number_of_ratings
+corr_contact[corr_contact['number_of_ratings'] > 100].sort_values(by = ['Correlation'], ascending = False)
+corr_contact.dropna(inplace=True,how = 'any')
+
+#printing the first 5 suggestions
+
+print("some suggestions for you:\n ")
+print(corr_contact.head(5))
